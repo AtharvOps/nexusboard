@@ -28,6 +28,8 @@ export const OrgSidebar = () => {
             alt="Logo"
             height={60}
             width={60}
+            priority
+            className="w-auto h-auto"
           />
           <span className={cn(
             "font-semibold text-xl",

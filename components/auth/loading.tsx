@@ -8,7 +8,8 @@ export const Loading = () => {
         alt="Logo"
         width={120}
         height={120}
-        className="animate-pulse duration-700"
+        priority
+        className="animate-pulse duration-700 w-auto h-auto"
       />
     </div>
   );

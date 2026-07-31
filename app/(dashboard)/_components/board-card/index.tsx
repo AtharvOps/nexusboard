@@ -70,6 +70,7 @@ export const BoardCard = ({
                   src={imageUrl}
                   alt={title}
                   fill
+                  priority
                   className="object-fit"
                 />
                 <Overlay />
