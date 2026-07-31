@@ -1,8 +1,8 @@
 import { createClient } from "@liveblocks/client";
-import { createRoomContext } from "@liveblocks/react"; // 👈 Added missing import
+import { createRoomContext } from "@liveblocks/react"; 
 
 export const client = createClient({
-  publicApiKey: process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY!,
+  authEndpoint: "/api/liveblocks-auth",
 });
 
 // Define Liveblocks types for your application

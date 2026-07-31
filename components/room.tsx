@@ -15,11 +15,11 @@ export const Room = ({
   fallback,
 }: RoomProps) => {
   return (
-    <LiveblocksProvider publicApiKey={process.env.NEXT_PUBLIC_LIVEBLOCKS_PUBLIC_KEY!}>
+    <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
         <RoomProvider id={roomId} initialPresence={{}}>
-        <ClientSideSuspense fallback={fallback}>
-            {() => children}
-        </ClientSideSuspense>
+            <ClientSideSuspense fallback={fallback}>
+                {() => children}
+            </ClientSideSuspense>
         </RoomProvider>
     </LiveblocksProvider>
   );
