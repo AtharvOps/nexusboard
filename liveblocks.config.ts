@@ -2,6 +2,7 @@ import { createClient } from "@liveblocks/client";
 import { createRoomContext } from "@liveblocks/react"; 
 
 export const client = createClient({
+  throttle: 16,
   authEndpoint: "/api/liveblocks-auth",
 });
 
@@ -9,7 +10,7 @@ export const client = createClient({
 declare global {
   interface Liveblocks {
     Presence: {
-      // Example: cursor: { x: number; y: number };
+      cursor: { x: number; y: number } | null;
     };
     Storage: {
       // Example: animals: LiveList<string>;

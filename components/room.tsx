@@ -1,7 +1,8 @@
 "use client";
 
 import { ReactNode } from "react";
-import { LiveblocksProvider, ClientSideSuspense, RoomProvider } from "@liveblocks/react"; 
+import { LiveblocksProvider, ClientSideSuspense } from "@liveblocks/react"; 
+import { RoomProvider } from "@/liveblocks.config";
 
 interface RoomProps { 
   children: ReactNode;
@@ -16,7 +17,12 @@ export const Room = ({
 }: RoomProps) => {
   return (
     <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
-        <RoomProvider id={roomId} initialPresence={{}}>
+        <RoomProvider 
+          id={roomId} 
+          initialPresence={{
+            cursor: null,
+          }}
+        >
             <ClientSideSuspense fallback={fallback}>
                 {() => children}
             </ClientSideSuspense>
