@@ -1,8 +1,13 @@
 "use client";
 
 import { nanoid } from "nanoid";
-import { useCallback, useMemo, useState } from "react";
-import { LiveObject, LiveMap } from "@liveblocks/client";
+import { 
+    useCallback, 
+    useMemo, 
+    useState, 
+    useEffect,
+} from "react";
+import { LiveObject } from "@liveblocks/client";
 import { 
     useHistory,
     useCanUndo, 
@@ -10,10 +15,14 @@ import {
     useMutation,
     useStorage,
     useOthersMapped,
+    useSelf,
 } from "@/liveblocks.config";
+//export { useSelf } from "@liveblocks/react/suspense";
 import { 
+    colorToCss,
     connectionIdToColor,
     findIntersectingLayersWithRectangle,
+    penPointsToPathLayer,
     pointerEventToCanvasPoint,
     resizeBounds, 
 } from "@/lib/utils";
@@ -27,8 +36,11 @@ import {
   Side,
   XYWH,
 } from "@/types/canvas";
+import { useDisableScrollBounce } from "@/hooks/use-disable-scroll-bounce";
+import { useDeleteLayers } from "@/hooks/use-delete-layers";
 
 import { Info } from "./info";
+import { Path } from "./path";
 import { Toolbar } from "./toolbar";
 import { Participants } from "./participants";
 import { LayerPreview } from "./layer-preview";
@@ -36,7 +48,14 @@ import { SelectionBox } from "./selection-box";
 import { SelectionTools } from "./selection-tools";
 import { CursorsPresence } from "./cursors-presence";
 
+// import { toPng } from "html-to-image";
+// import { useQuery } from "convex/react";
+import { Id } from "@/convex/_generated/dataModel";
+import { api } from "@/convex/_generated/api";
+
 const MAX_LAYERS = 100;
+const SELECTION_NET_THRESHOLD = 5;
+const MOVE_OFFSET = 5;
 
 interface CanvasProps {
     boardId: string;
@@ -46,24 +65,30 @@ export const Canvas = ({
     boardId,
 }: CanvasProps) => {
     const layerIds = useStorage((root) => root.layerIds);
+    const pencilDraft = useSelf((me) => me.presence.pencilDraft);
 
     const [canvasState, setCanvasState] = useState<CanvasState>({
         mode: CanvasMode.None,
     });
     const [camera, setCamera] = useState<Camera>({ x: 0, y: 0 });
     const [lastUsedColor, setLastUsedColor] = useState<Color>({
-        r: 0,
-        g: 0,
-        b: 0,
+        r: 225,
+        g: 225,
+        b: 225,
     });
 
+    useDisableScrollBounce();
     const history = useHistory();
     const canUndo = useCanUndo();
     const canRedo = useCanRedo();
 
     const insertLayer = useMutation((
         { storage, setMyPresence },
-        layerType: LayerType.Ellipse | LayerType.Rectangle | LayerType.Text | LayerType.Note,
+        layerType: 
+            | LayerType.Ellipse
+            | LayerType.Rectangle
+            | LayerType.Text
+            | LayerType.Note,
         position: Point,
     ) => {
         const liveLayers = storage.get("layers");
@@ -166,6 +191,74 @@ export const Canvas = ({
         }
     }, []);
 
+    const continueDrawing = useMutation((
+        { self, setMyPresence },
+        point: Point,
+        e: React.PointerEvent,
+    ) => {
+        const { pencilDraft } = self.presence;
+
+        if (
+            canvasState.mode !== CanvasMode.Pencil ||
+            e.buttons !== 1 ||
+            pencilDraft == null
+        ) {
+            return;
+        }
+
+        setMyPresence({
+            cursor: point,
+            pencilDraft:
+                pencilDraft.length === 1 &&
+                pencilDraft[0][0] === point.x &&
+                pencilDraft[0][1] === point.y
+                  ? pencilDraft
+                  : [...pencilDraft, [point.x, point.y, e.pressure]],
+        });
+    }, [canvasState.mode]);
+
+    const insertPath = useMutation((
+        { storage, self, setMyPresence }
+    ) => {
+        const liveLayers = storage.get("layers");
+        const { pencilDraft } = self.presence;
+
+        if (
+            pencilDraft == null ||
+            pencilDraft.length < 2 ||
+            liveLayers.size >= MAX_LAYERS
+        ) {
+            setMyPresence({ pencilDraft: null });
+            return;
+        }
+
+        const id = nanoid();
+        liveLayers.set(
+            id,
+            new LiveObject(penPointsToPathLayer(
+                pencilDraft,
+                lastUsedColor,
+           )),
+        );
+
+        const liveLayerIds = storage.get("layerIds");
+        liveLayerIds.push(id);
+
+        setMyPresence({ pencilDraft: null });
+        setCanvasState({ mode: CanvasMode.Pencil });
+    }, [lastUsedColor]);
+
+    const startDrawing = useMutation((
+        { setMyPresence, storage },
+        point: Point,
+        pressure: number,
+    ) => {
+        setMyPresence({
+           pencilDraft: [[point.x, point.y, pressure]],
+           penColor: lastUsedColor, 
+        })
+    }, [lastUsedColor]);
+
     const resizeSelectedLayer = useMutation((
         { storage, self },
         point: Point,
@@ -217,22 +310,27 @@ export const Canvas = ({
         const current = pointerEventToCanvasPoint(e, camera);
 
         if (canvasState.mode === CanvasMode.Pressing) {
-          startMultiSelection(current, canvasState.origin);
+            startMultiSelection(current, canvasState.origin);
         } else if (canvasState.mode === CanvasMode.SelectionNet) {
-          updateSelectionNet(current, canvasState.origin);
+            updateSelectionNet(current, canvasState.origin);
         } else if (canvasState.mode === CanvasMode.Translating) {
-          translateSelectedLayers(current);
+            translateSelectedLayers(current);
         } else if (canvasState.mode === CanvasMode.Resizing) {
-          resizeSelectedLayer(current);
+            resizeSelectedLayer(current);
+        } else if (canvasState.mode === CanvasMode.Pencil) {
+            continueDrawing(current, e);
         }
 
         setMyPresence({ cursor: current });
     },
     [
+        continueDrawing,
         camera,
         canvasState,
         resizeSelectedLayer,
         translateSelectedLayers,
+        startMultiSelection,
+        updateSelectionNet,
     ]);
 
     const onPointerLeave = useMutation(({ setMyPresence }) => {
@@ -248,10 +346,18 @@ export const Canvas = ({
             return;
         }
 
-        // TODO: Add case for drawing
+        if (canvasState.mode === CanvasMode.Pencil) {
+            startDrawing(point, e.pressure);
+            return;
+        }
 
         setCanvasState({ origin: point, mode: CanvasMode.Pressing });
-    }, [camera, canvasState.mode, setCanvasState]);
+    }, [
+        camera, 
+        canvasState.mode, 
+        setCanvasState, 
+        startDrawing
+    ]);
 
     const onPointerUp = useMutation((
         {},
@@ -267,6 +373,8 @@ export const Canvas = ({
       setCanvasState({
         mode: CanvasMode.None,
       });
+    }else if ( canvasState.mode === CanvasMode.Pencil){
+        insertPath();
     }else if (canvasState.mode === CanvasMode.Inserting) {
       insertLayer(canvasState.layerType, point);
     } else {
@@ -278,11 +386,13 @@ export const Canvas = ({
         history.resume();
     }, 
     [
+        setCanvasState,
         camera,
         canvasState,
         history,
         insertLayer,
         unselectLayers,
+        insertPath,
     ]);
 
     const selections = useOthersMapped((other) => other.presence.selection);
@@ -329,6 +439,148 @@ export const Canvas = ({
 
         return layerIdsToColorSelection;
     }, [selections]);
+
+    const duplicateLayers = useMutation(({ storage, self, setMyPresence }) => {
+        const liveLayers = storage.get("layers");
+        const liveLayerIds = storage.get("layerIds");
+        const newLayerIds: string[] = [];
+        const layersIdsToCopy = self.presence.selection;
+
+        if (liveLayerIds.length + layersIdsToCopy.length > MAX_LAYERS) {
+            return;
+        }
+
+        if (layersIdsToCopy.length === 0) {
+            return;
+        }
+
+        layersIdsToCopy.forEach((layerId) => {
+            const newLayerId = nanoid();
+            const layer = liveLayers.get(layerId);
+
+            if (layer) {
+                const newLayer = layer.clone();
+                newLayer.set("x", newLayer.get("x") + 10);
+                newLayer.set("y", newLayer.get("y") + 10);
+
+                liveLayerIds.push(newLayerId);
+                liveLayers.set(newLayerId, newLayer);
+
+                newLayerIds.push(newLayerId);
+            }
+        });
+
+        setMyPresence({ selection: [...newLayerIds] }, { addToHistory: true });
+        setCanvasState({ mode: CanvasMode.None });
+    }, []);
+
+    const moveSelectedLayers = useMutation(
+        ({ storage, self, setMyPresence }, offset: Point) => {
+            const liveLayers = storage.get("layers");
+            const selection = self.presence.selection;
+
+            if (selection.length === 0) {
+                return;
+            }
+
+            for (const id of selection) {
+                const layer = liveLayers.get(id);
+                if (layer) {
+                    layer.update({
+                        x: layer.get("x") + offset.x,
+                        y: layer.get("y") + offset.y,
+                    });
+                }
+            }
+
+            setMyPresence({ selection }, { addToHistory: true });
+        },
+        [canvasState, history]
+    );
+
+    // const svgRef = useRef<SVGSVGElement | null>(null);
+    // const data = useQuery(api.board.get, { id: boardId as Id<"boards"> });
+
+    // const exportAsPng = () => {
+    //     if (svgRef.current) {
+    //         const bbox = svgRef.current.getBBox();
+    //         const svgClone = svgRef.current.cloneNode(true) as SVGSVGElement;
+
+    //         svgClone.setAttribute("width", bbox.width.toString());
+    //         svgClone.setAttribute("height", bbox.height.toString());
+    //         svgClone.setAttribute(
+    //             "viewBox",
+    //             `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`
+    //         );
+
+    //         document.body.appendChild(svgClone);
+
+    //         toPng(svgClone as unknown as HTMLElement)
+    //             .then((dataUrl) => {
+    //                 const link = document.createElement("a");
+    //                 link.href = dataUrl;
+    //                 link.download = `${data?.title || "download"}.png`;
+    //                 document.body.appendChild(link);
+    //                 link.click();
+    //                 document.body.removeChild(link);
+    //                 document.body.removeChild(svgClone);
+    //             })
+    //             .catch((error) => {
+    //                 console.error("Error exporting SVG to PNG", error);
+    //                 document.body.removeChild(svgClone);
+    //             });
+    //     }
+    // };
+
+    const deleteLayers = useDeleteLayers();
+
+    useEffect(() => {
+        function onKeyDown(e: KeyboardEvent) {
+            let offset: Point = { x: 0, y: 0 };
+            switch (e.key) {
+                case "d": {
+                    if (e.ctrlKey && canvasState.mode === CanvasMode.None) {
+                        duplicateLayers();
+                    }
+                    break;
+                }
+                case "z": {
+                    if (e.ctrlKey || e.metaKey) {
+                        if (e.shiftKey) {
+                            history.redo();
+                        } else {
+                            history.undo();
+                        }
+                        break;
+                    }
+                }
+                case "ArrowUp":
+                    offset = { x: 0, y: -MOVE_OFFSET };
+                    moveSelectedLayers(offset);
+                    break;
+                case "ArrowDown":
+                    offset = { x: 0, y: MOVE_OFFSET };
+                    moveSelectedLayers(offset);
+                    break;
+                case "ArrowLeft":
+                    offset = { x: -MOVE_OFFSET, y: 0 };
+                    moveSelectedLayers(offset);
+                    break;
+                case "ArrowRight":
+                    offset = { x: MOVE_OFFSET, y: 0 };
+                    moveSelectedLayers(offset);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        document.addEventListener("keydown", onKeyDown);
+
+        return () => {
+          document.removeEventListener("keydown", onKeyDown)
+        }
+    }, [deleteLayers, history]);
 
     return (
         <main className="h-full w-full relative bg-neutral-100 touch-none">
@@ -381,9 +633,18 @@ export const Canvas = ({
                     />
                 )}
                 <CursorsPresence />
+                {pencilDraft != null && pencilDraft.length > 0 && (
+                    <Path
+                        points={pencilDraft}
+                        fill={colorToCss(lastUsedColor)}
+                        x={0}
+                        y={0}
+                    />
+                )}
               </g>
             </svg>
         </main>
     );
 };
+
 
