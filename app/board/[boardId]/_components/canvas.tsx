@@ -50,11 +50,11 @@ import { CursorsPresence } from "./cursors-presence";
 
 // import { toPng } from "html-to-image";
 // import { useQuery } from "convex/react";
-import { Id } from "@/convex/_generated/dataModel";
-import { api } from "@/convex/_generated/api";
+// import { Id } from "@/convex/_generated/dataModel";
+// import { api } from "@/convex/_generated/api";
 
 const MAX_LAYERS = 100;
-const SELECTION_NET_THRESHOLD = 5;
+//const SELECTION_NET_THRESHOLD = 5;
 const MOVE_OFFSET = 5;
 
 interface CanvasProps {
@@ -249,7 +249,7 @@ export const Canvas = ({
     }, [lastUsedColor]);
 
     const startDrawing = useMutation((
-        { setMyPresence, storage },
+        { setMyPresence },
         point: Point,
         pressure: number,
     ) => {

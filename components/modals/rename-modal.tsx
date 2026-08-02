@@ -33,7 +33,10 @@ export const RenameModal = () => {
   const [title, setTitle] = useState(initialValues.title);
 
   useEffect(() => {
-    setTitle(initialValues.title);
+  const timer = setTimeout(() => {
+      setTitle(initialValues.title);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [initialValues.title]);
 
   const onSubmit: FormEventHandler<HTMLFormElement> = (

@@ -33,9 +33,9 @@ declare global {
         picture?: string;
       };
     };
-    RoomEvent: {};
-    ThreadMetadata: {};
-    RoomInfo: {};
+    RoomEvent: Record<string, never>;
+    ThreadMetadata: Record<string, never>;
+    RoomInfo: Record<string, never>;
   }
 }
 
@@ -55,7 +55,7 @@ export const {
     useEventListener,
     useErrorListener,
     useStorage,
-    // useObject,
+    //useObject,
     // useMap,
     // useList,
     // useBatch,
