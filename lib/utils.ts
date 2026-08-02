@@ -1,9 +1,11 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { LiveMap, LiveObject } from "@liveblocks/client";
 
 import { 
   Camera, 
   Color,
+  Layer,
   Point,
   Side,
   XYWH,
@@ -75,3 +77,41 @@ export function resizeBounds(
 
   return result;
 };
+
+export function findIntersectingLayersWithRectangle(
+  layerIds: readonly string[],
+  layers: LiveMap<string, LiveObject<Layer>>,
+  a: Point,
+  b: Point,
+) {
+  const rect = {
+    x: Math.min(a.x, b.x),
+    y: Math.min(a.y, b.y),
+    width: Math.abs(a.x - b.x),
+    height: Math.abs(a.y - b.y),
+  };
+
+  const ids: string[] = [];
+
+  for (const layerId of layerIds) {
+    const layer = layers.get(layerId);
+
+    if (!layer) continue;
+
+    const x = layer.get("x");
+    const y = layer.get("y");
+    const width = layer.get("width");
+    const height = layer.get("height");
+
+    if (
+      rect.x + rect.width > x &&
+      rect.x < x + width &&
+      rect.y + rect.height > y &&
+      rect.y < y + height
+    ) {
+      ids.push(layerId);
+    }
+  }
+
+  return ids;
+}
