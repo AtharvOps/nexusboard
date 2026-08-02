@@ -1,5 +1,12 @@
-import { createClient } from "@liveblocks/client";
-import { createRoomContext } from "@liveblocks/react"; 
+import { 
+  createClient,
+  LiveList,
+  LiveMap,
+  LiveObject,
+} from "@liveblocks/client";
+import { createRoomContext } from "@liveblocks/react";
+
+import { Layer, Color } from "@/types/canvas";
 
 export const client = createClient({
   throttle: 16,
@@ -11,9 +18,11 @@ declare global {
   interface Liveblocks {
     Presence: {
       cursor: { x: number; y: number } | null;
+      selection: string[];
     };
     Storage: {
-      // Example: animals: LiveList<string>;
+      layers: LiveMap<string, LiveObject<Layer>>;
+      layerIds: LiveList<string>;
     };
     UserMeta: {
       id?: string;
