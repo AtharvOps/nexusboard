@@ -32,6 +32,7 @@ import { Toolbar } from "./toolbar";
 import { Participants } from "./participants";
 import { LayerPreview } from "./layer-preview";
 import { SelectionBox } from "./selection-box";
+import { SelectionTools } from "./selection-tools";
 import { CursorsPresence } from "./cursors-presence";
 
 const MAX_LAYERS = 100;
@@ -298,6 +299,10 @@ export const Canvas = ({
               canUndo={canUndo}
               undo={() => { history.undo(); }}
               redo={() => { history.redo(); }}
+            />
+            <SelectionTools
+                camera={camera}
+                setLastUsedColor={setLastUsedColor}
             />
             <svg
               className="h-screen w-screen"
