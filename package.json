@@ -19,6 +19,7 @@
     "convex-helpers": "^0.1.120",
     "date-fns": "^4.4.0",
     "html-to-image": "^1.11.13",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.26.0",
     "nanoid": "^5.1.16",
     "next": "16.2.11",

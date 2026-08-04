@@ -6,7 +6,7 @@ import {
 } from "@liveblocks/client";
 import { createRoomContext } from "@liveblocks/react";
 
-import { Layer, Color } from "@/types/canvas";
+import { Layer, Color, GridMode } from "@/types/canvas";
 
 export const client = createClient({
   throttle: 16,
@@ -21,10 +21,14 @@ declare global {
       selection: string[];
       pencilDraft: [x: number, y: number, pressure: number][] | null;
       penColor: Color | null;
+      followingUserConnectionId?: number | null;
+      reaction?: { emoji: string; timestamp: number } | null;
+      camera?: { x: number; y: number } | null;
     };
     Storage: {
       layers: LiveMap<string, LiveObject<Layer>>;
       layerIds: LiveList<string>;
+      gridMode?: GridMode;
     };
     UserMeta: {
       id?: string;
@@ -33,7 +37,7 @@ declare global {
         picture?: string;
       };
     };
-    RoomEvent: Record<string, never>;
+    RoomEvent: { type: "EMOJI_REACTION"; emoji: string; x: number; y: number; connectionId: number };
     ThreadMetadata: Record<string, never>;
     RoomInfo: Record<string, never>;
   }
@@ -55,10 +59,6 @@ export const {
     useEventListener,
     useErrorListener,
     useStorage,
-    //useObject,
-    // useMap,
-    // useList,
-    // useBatch,
     useHistory,
     useUndo,
     useRedo,

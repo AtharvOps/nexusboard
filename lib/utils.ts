@@ -45,6 +45,24 @@ export function colorToCss(color: Color) {
   return `#${color.r.toString(16).padStart(2, "0")}${color.g.toString(16).padStart(2, "0")}${color.b.toString(16).padStart(2, "0")}`;
 }
 
+export function hexToRgb(hex: string): Color {
+  let c = hex.replace("#", "");
+  if (c.length === 3) {
+    c = c.split("").map((x) => x + x).join("");
+  }
+  const num = parseInt(c, 16);
+  if (isNaN(num)) return { r: 0, g: 0, b: 0 };
+  return {
+    r: (num >> 16) & 255,
+    g: (num >> 8) & 255,
+    b: num & 255,
+  };
+}
+
+export function colorToRgba(color: Color, alpha: number = 1): string {
+  return `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
+}
+
 export function resizeBounds(
   bounds: XYWH, 
   corner: Side, 
@@ -184,3 +202,17 @@ export function getSvgPathFromStroke(stroke: number[][]) {
   d.push("Z");
   return d.join(" ");
 };
+
+export function computeOrthogonalPath(start: Point, end: Point): string {
+  const midX = (start.x + end.x) / 2;
+  return `M ${start.x} ${start.y} L ${midX} ${start.y} L ${midX} ${end.y} L ${end.x} ${end.y}`;
+}
+
+export function computeCurvedPath(start: Point, end: Point): string {
+  const dx = Math.abs(end.x - start.x) / 2;
+  const cp1x = start.x + dx;
+  const cp1y = start.y;
+  const cp2x = end.x - dx;
+  const cp2y = end.y;
+  return `M ${start.x} ${start.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${end.x} ${end.y}`;
+}

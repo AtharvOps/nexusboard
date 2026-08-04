@@ -1,6 +1,4 @@
-
-
-export default {
+const authConfig = {
   providers: [
     {
       domain: "https://informed-hamster-62.clerk.accounts.dev",
@@ -8,3 +6,5 @@ export default {
     },
   ]
 };
+
+export default authConfig;

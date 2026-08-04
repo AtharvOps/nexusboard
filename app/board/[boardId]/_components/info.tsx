@@ -43,7 +43,7 @@ export const Info = ({
   if (!data) return <InfoSkeleton />;
 
   return (
-    <div className="absolute top-2 left-2 bg-white rounded-md px-1.5 h-12 flex items-center shadow-md">
+    <div className="bg-white rounded-md px-1.5 h-12 flex items-center shadow-md">
        <Hint label="Go to boards" side="bottom" sideOffset={10}>
         <Button asChild variant="board" className="px-2">
           <Link href="/">
@@ -94,7 +94,7 @@ export const Info = ({
 export const InfoSkeleton = () => {
   return (
     <div 
-      className="absolute top-2 left-2 bg-white rounded-md px-1.5 h-12 flex items-center shadow-md w-75"
+      className="bg-white rounded-md px-1.5 h-12 flex items-center shadow-md w-75"
     />
   );
 };

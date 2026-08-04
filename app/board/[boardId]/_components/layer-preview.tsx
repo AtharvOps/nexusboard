@@ -3,7 +3,7 @@
 import { memo } from "react";
 
 import { colorToCss } from "@/lib/utils";
-import { LayerType } from "@/types/canvas";
+import { Layer, LayerType } from "@/types/canvas";
 import { useStorage } from "@/liveblocks.config";
 
 import { Text } from "./text";
@@ -11,6 +11,9 @@ import { Ellipse } from "./ellipse";
 import { Rectangle } from "./rectangle";
 import { Note } from "./note";
 import { Path } from "./path";
+import { ExtendedShape } from "@/components/canvas/extended-shapes";
+import { SmartConnector } from "@/components/canvas/smart-connector";
+import { CanvasImageLayer } from "@/components/canvas/image-layer";
 
 interface LayerPreviewProps {
   id: string;
@@ -23,7 +26,11 @@ export const LayerPreview = memo(({
   onLayerPointerDown,
   selectionColor,
 }: LayerPreviewProps) => {
-  const layer = useStorage((root) => root.layers?.[id]);
+  const layer = useStorage((root) => {
+    const layers = root.layers as unknown as { get?: (id: string) => Layer } & Record<string, Layer>;
+    if (!layers) return null;
+    return typeof layers.get === "function" ? layers.get(id) : layers[id];
+  });
 
   if (!layer) {
     return null;
@@ -72,6 +79,42 @@ export const LayerPreview = memo(({
     case LayerType.Rectangle:
       return (
         <Rectangle
+          id={id}
+          layer={layer}
+          onPointerDown={onLayerPointerDown}
+          selectionColor={selectionColor}
+        />
+      );
+    case LayerType.Diamond:
+    case LayerType.Triangle:
+    case LayerType.Star:
+    case LayerType.Database:
+    case LayerType.Capsule:
+    case LayerType.Hexagon:
+    case LayerType.Parallelogram:
+    case LayerType.Cloud:
+    case LayerType.Document:
+    case LayerType.Decision:
+      return (
+        <ExtendedShape
+          id={id}
+          layer={layer}
+          onPointerDown={onLayerPointerDown}
+          selectionColor={selectionColor}
+        />
+      );
+    case LayerType.Connector:
+      return (
+        <SmartConnector
+          id={id}
+          layer={layer}
+          onPointerDown={onLayerPointerDown}
+          selectionColor={selectionColor}
+        />
+      );
+    case LayerType.Image:
+      return (
+        <CanvasImageLayer
           id={id}
           layer={layer}
           onPointerDown={onLayerPointerDown}

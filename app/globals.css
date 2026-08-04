@@ -134,3 +134,15 @@ body,
     @apply font-sans;
   }
 }
+
+/* Hide Powered by Liveblocks watermark */
+[class*="liveblocks"],
+[id*="liveblocks"],
+[data-liveblocks-badge],
+.lb-watermark,
+a[href*="liveblocks.io"] {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}

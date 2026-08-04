@@ -1,27 +1,11 @@
-import { Kalam } from "next/font/google";
+"use client";
+
+import { useRef } from "react";
 import ContentEditable, { ContentEditableEvent } from "react-contenteditable";
 
 import { TextLayer } from "@/types/canvas";
 import { cn, colorToCss } from "@/lib/utils";
 import { useMutation } from "@/liveblocks.config";
-
-const font = Kalam({
-  subsets: ["latin"],
-  weight: ["400"],
-});
-
-const calculateFontSize = (width: number, height: number) => {
-  const maxFontSize = 96;
-  const scaleFactor = 0.5;
-  const fontSizeBasedOnHeight = height * scaleFactor;
-  const fontSizeBasedOnWidth = width * scaleFactor;
-
-  return Math.min(
-    fontSizeBasedOnHeight, 
-    fontSizeBasedOnWidth, 
-    maxFontSize
-  );
-}
 
 interface TextProps {
   id: string;
@@ -36,19 +20,44 @@ export const Text = ({
   id,
   selectionColor,
 }: TextProps) => {
-  const { x, y, width, height, fill, value } = layer;
+  const { 
+    x, 
+    y, 
+    width, 
+    height, 
+    fill, 
+    value, 
+    fontSize = 24, 
+    fontFamily = "sans-serif", 
+    fontWeight = "normal", 
+    textAlign = "center" 
+  } = layer;
+  
+  const textRef = useRef<HTMLDivElement>(null);
 
-  const updateValue = useMutation((
-    { storage },
-    newValue: string,
-  ) => {
+  const updateTextAndWidth = useMutation(({ storage }, newValue: string, newWidth?: number) => {
     const liveLayers = storage.get("layers");
-
-    liveLayers.get(id)?.set("value", newValue);
-  }, []);
+    const l = liveLayers.get(id);
+    if (l) {
+      l.set("value", newValue);
+      if (newWidth && newWidth > l.get("width")) {
+        l.set("width", Math.ceil(newWidth));
+      }
+    }
+  }, [id]);
 
   const handleContentChange = (e: ContentEditableEvent) => {
-    updateValue(e.target.value);
+    const newValue = e.target.value;
+    let measuredWidth: number | undefined = undefined;
+
+    if (textRef.current) {
+      const currentScrollWidth = textRef.current.scrollWidth + 24;
+      if (currentScrollWidth > width) {
+        measuredWidth = currentScrollWidth;
+      }
+    }
+
+    updateTextAndWidth(newValue, measuredWidth);
   };
 
   return (
@@ -58,22 +67,28 @@ export const Text = ({
       width={width}
       height={height}
       onPointerDown={(e) => onPointerDown(e, id)}
+      className="overflow-visible"
       style={{
         outline: selectionColor ? `1px solid ${selectionColor}` : "none"
       }}
     >
-      <ContentEditable
-        html={value || "Text"}
-        onChange={handleContentChange}
-        className={cn(
-          "h-full w-full flex items-center justify-center text-center drop-shadow-md outline-none",
-          font.className
-        )}
-        style={{
-          fontSize: calculateFontSize(width, height),
-          color: fill ? colorToCss(fill) : "#000",
-        }}
-      />
+      <div className="w-full h-full flex items-center justify-center">
+        <ContentEditable
+          innerRef={textRef as unknown as React.RefObject<HTMLDivElement>}
+          html={value || "Text"}
+          onChange={handleContentChange}
+          className={cn(
+            "outline-none drop-shadow-md select-text min-w-12.5 whitespace-pre cursor-text p-1"
+          )}
+          style={{
+            fontSize: `${fontSize}px`,
+            fontFamily,
+            fontWeight,
+            textAlign,
+            color: fill ? colorToCss(fill) : "#000",
+          }}
+        />
+      </div>
     </foreignObject>
   );
 };
